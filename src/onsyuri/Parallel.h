@@ -44,13 +44,21 @@
 
 #if defined(USE_PARALLEL) || defined(USE_OMP_PARALLEL)
 #include <assert.h>
+#ifdef MIKAGE_ONS_HOST
+#include <unistd.h>
+#endif
 #include "Utils.h"
 
 namespace parallel {
 #ifdef USE_OMP_PARALLEL
   static const int thread_num = omp_get_num_procs();
 #elif defined(USE_PARALLEL)
+#ifdef MIKAGE_ONS_HOST
+  // This runs before sdl2-compat has loaded SDL3, so it can't call SDL.
+  static const int thread_num = utils::clamp((int)sysconf(_SC_NPROCESSORS_ONLN), 1, 64);
+#else
   static const int thread_num = utils::min(SDL_GetCPUCount(), 64);
+#endif
 
   class ThreadPool {
     struct Thread {

@@ -36,6 +36,9 @@ set_target_properties(SDL3::Headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${
 # support (branch shared-sdl3/ons). The SDL satellite libraries use only
 # their bundled codecs, so nothing else has to be built for iOS.
 include(FetchContent)
+# SDL_ttf's vendored FreeType still asks for CMake 2.8, which CMake 4
+# refuses without this.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_Declare(sdl2_compat
     GIT_REPOSITORY https://github.com/itsCheney/sdl2-compat.git
     GIT_TAG 7f8f1c7293decab05c59aa28a2c9b095546efa29)

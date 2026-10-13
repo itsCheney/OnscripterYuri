@@ -41,7 +41,7 @@ include(FetchContent)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_Declare(sdl2_compat
     GIT_REPOSITORY https://github.com/itsCheney/sdl2-compat.git
-    GIT_TAG 7f8f1c7293decab05c59aa28a2c9b095546efa29)
+    GIT_TAG d02db3d9f09ef18f0adb05981ebd1760b9454bf1)
 FetchContent_Declare(sdl2_image
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
     GIT_TAG 12cb2e40330d256d9b1329647be8f366546d715c # release-2.8.12

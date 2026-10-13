@@ -114,6 +114,9 @@ public:
     void setWindowHeight(int height);
     void setSharpness(float sharpness);
     int  getWidth(){ return screen_width;};
+    // The composited frame before scaling, for host screenshots.
+    SDL_Surface *getFrameSurface(){ return accumulation_surface; };
+    SDL_Window *getWindow(){ return window; };
     int  getHeight(){return screen_height;};
     ButtonState &getCurrentButtonState(){return current_button_state;};
     int  getSkip(){return automode_flag?2:((skip_mode&SKIP_NORMAL)?1:0);};

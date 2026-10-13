@@ -43,6 +43,10 @@ public:
     static char *cache_font_file;
     static void *font_cache;
     static int font_cache_size;
+    // Drops the fonts openFont() keeps for reuse, without closing them.
+    // A host that runs several games in one process calls this before
+    // TTF_Quit(), so the next game doesn't reuse fonts from the last one.
+    static void forgetOpenFonts();
     void *ttf_font[2]; // 0...normal rendering, 1...outline rendering
     uchar3 color;
     uchar3 on_color, off_color, nofile_color;

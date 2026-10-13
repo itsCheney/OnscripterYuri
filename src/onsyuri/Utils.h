@@ -52,6 +52,12 @@ static BOOL MByteToWChar(LPCSTR lpcszStr, LPWSTR lpwszStr, DWORD dwSize)
 extern std::string g_stdoutpath;
 extern std::string g_stderrpath;
 
+#if defined(MIKAGE_ONS_HOST)
+// Mikage collects engine messages through its host log instead of files
+// in the game folder (src/onsyuri_mikage).
+extern "C" void MikageONSLogV(int level, const char *format, va_list ap);
+#endif
+
 namespace utils{
 	inline void printInfo(const char *format, ...){
 		va_list ap;
@@ -74,7 +80,9 @@ namespace utils{
 			fclose(fp);
 		}
 #endif
-#ifdef ANDROID
+#if defined(MIKAGE_ONS_HOST)
+		MikageONSLogV(3, format, ap);
+#elif defined(ANDROID)
 		__android_log_vprint(ANDROID_LOG_INFO, "## onsyuri", format, ap);
 #elif defined(WINRT)
 		char *buf = new char[256];
@@ -109,7 +117,9 @@ namespace utils{
 			fclose(fp);
 		}
 #endif
-#ifdef ANDROID
+#if defined(MIKAGE_ONS_HOST)
+		MikageONSLogV(5, format, ap);
+#elif defined(ANDROID)
 		__android_log_vprint(ANDROID_LOG_ERROR, "## onsyuri", format, ap);
 #elif defined(WINRT)
 		char *buf = new char[256];

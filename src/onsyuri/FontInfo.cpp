@@ -66,6 +66,17 @@ char *FontInfo::cache_font_file = NULL;
 void *FontInfo::font_cache = NULL;
 int FontInfo::font_cache_size = 0;
 
+void FontInfo::forgetOpenFonts()
+{
+    // Normal and outline fonts can share one SDL_RWops that each of them
+    // owns, so closing both would free it twice. The host shuts SDL_ttf
+    // down right after this, which releases FreeType's memory anyway.
+    root_font_container.next = NULL;
+    cache_font_file = NULL;
+    font_cache = NULL;
+    font_cache_size = 0;
+}
+
 FontInfo::FontInfo()
 {
     ttf_font[0] = ttf_font[1] = NULL;

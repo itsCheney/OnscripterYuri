@@ -410,7 +410,7 @@ int ONScripter::playAVI( const char *filename, bool click_flag )
 #if !defined(WINRT) && (defined(WIN32) || defined(_WIN32))
     system(absolute_filename);
 #elif defined(IOS)
-    playVideoIOS(absolute_filename, click_flag, loop_flag);
+    playVideoIOS(absolute_filename, click_flag, false); // avi has no loop option
 #elif defined(ANDROID)
     playVideoAndroid(absolute_filename);
 #else

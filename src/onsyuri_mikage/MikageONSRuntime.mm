@@ -42,6 +42,8 @@
 Coding2UTF16 *coding2utf16 = NULL;
 std::string g_stdoutpath;
 std::string g_stderrpath;
+// The running engine, also read by the built-in layer effects.
+ONScripter *mikage_ons_engine = nullptr;
 
 // Engine globals that must start from zero for each game.
 extern SDL_TimerID timer_cdaudio_id;
@@ -73,7 +75,7 @@ std::mutex errorMutex;
 std::string lastEngineError;
 std::string lastError;
 
-ONScripter *engine = nullptr;
+ONScripter *&engine = mikage_ons_engine;
 MikageONSMenuCallback menuCallback = nullptr;
 MikageONSCompletionCallback completionCallback = nullptr;
 void *callbackContext = nullptr;

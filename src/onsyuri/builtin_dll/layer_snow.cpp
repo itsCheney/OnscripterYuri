@@ -34,7 +34,13 @@
 #include <SDL2/SDL_image.h>
 #endif
 
+#ifdef MIKAGE_ONS_HOST
+// Mikage creates a new engine for each game instead of a global one.
+extern ONScripter *mikage_ons_engine;
+#define ons (*mikage_ons_engine)
+#else
 extern ONScripter ons;
+#endif
 
 static const float FURU_RATE_COEF = 0.2;
 static float *base_disp_table = NULL;

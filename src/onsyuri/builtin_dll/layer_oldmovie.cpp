@@ -32,7 +32,13 @@
 #define MAX_DUST_COUNT    10
 #define MAX_SCRATCH_COUNT  6
 
+#ifdef MIKAGE_ONS_HOST
+// Mikage creates a new engine for each game instead of a global one.
+extern ONScripter *mikage_ons_engine;
+#define ons (*mikage_ons_engine)
+#else
 extern ONScripter ons;
+#endif
 
 static int scratch_count;    // Number of scratches visible.
 

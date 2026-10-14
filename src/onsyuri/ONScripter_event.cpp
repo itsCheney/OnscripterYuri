@@ -1397,6 +1397,11 @@ void ONScripter::runEventLoop()
                   Mix_ResumeMusic();
                   Mix_Resume(-1);
                   break;
+#ifdef MIKAGE_ONS_HOST
+              // The drawable also changes without a resize, e.g. when the
+              // window turns desktop-fullscreen after it was created.
+              case SDL_WINDOWEVENT_SIZE_CHANGED:
+#endif
               case SDL_WINDOWEVENT_RESIZED:
                   calcRenderRect();
                   repaintCommand();

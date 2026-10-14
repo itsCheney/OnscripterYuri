@@ -5,7 +5,8 @@
 #   cmake -S src/onsyuri_mikage -B build -G Xcode \
 #     -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos \
 #     -DCMAKE_OSX_ARCHITECTURES=arm64 \
-#     -DMIKAGE_SDL3_FRAMEWORK=/path/to/ios-arm64/SDL3.framework
+#     -DMIKAGE_SDL3_FRAMEWORK=/path/to/ios-arm64/SDL3.framework \
+#     -DMIKAGE_FFMPEG_ROOT=/path/to/ffmpeg/arm64-ios
 #   cmake --build build --config Release --target ONSRuntime
 
 cmake_minimum_required(VERSION 3.24)
@@ -18,6 +19,13 @@ endif()
 set(MIKAGE_SDL3_FRAMEWORK "" CACHE PATH "SDL3.framework the app embeds; sdl2-compat is built against its headers")
 if(NOT EXISTS "${MIKAGE_SDL3_FRAMEWORK}/Headers/SDL.h")
     message(FATAL_ERROR "MIKAGE_SDL3_FRAMEWORK is not an SDL3.framework: '${MIKAGE_SDL3_FRAMEWORK}'")
+endif()
+# Movies are decoded with FFmpeg's static libraries for this SDK (include/
+# and lib/ under one prefix). Mikage passes the ones its KiriKiri build
+# already installs with vcpkg.
+set(MIKAGE_FFMPEG_ROOT "" CACHE PATH "Prefix with FFmpeg's headers and static libraries for this SDK")
+if(NOT EXISTS "${MIKAGE_FFMPEG_ROOT}/include/libavformat/avformat.h")
+    message(FATAL_ERROR "MIKAGE_FFMPEG_ROOT has no FFmpeg headers: '${MIKAGE_FFMPEG_ROOT}'")
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
@@ -103,6 +111,16 @@ set(SDL2TTF_HARFBUZZ OFF)
 
 FetchContent_MakeAvailable(sdl2_image sdl2_mixer sdl2_ttf lua)
 
+# MIDI music. SDL_mixer's native MIDI backend for Apple platforms is
+# macOS-only (it relies on the system's General MIDI instruments), so the
+# MIDI option stays off and native_midi_ios.c plugs in instead; it plays
+# through a SoundFont the host sets with Mix_SetSoundFonts().
+target_compile_definitions(SDL2_mixer PRIVATE MUSIC_MID_NATIVE)
+target_sources(SDL2_mixer PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/native_midi_ios.c")
+target_include_directories(SDL2_mixer PRIVATE
+    "${sdl2_mixer_SOURCE_DIR}/src/codecs/native_midi")
+target_link_libraries(SDL2_mixer PRIVATE "-framework AudioToolbox")
+
 # ONScripter includes the satellite headers as <SDL2/...>.
 set(MIKAGE_SDL2_EXTRA_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/sdl2-extra-include")
 file(MAKE_DIRECTORY "${MIKAGE_SDL2_EXTRA_INCLUDE}/SDL2")
@@ -158,6 +176,7 @@ list(TRANSFORM ONSYURI_SOURCES PREPEND "${ONSYURI_DIR}/")
 # onscripter_main.cpp is replaced by the host API.
 set(HOST_SOURCES
     MikageONSRuntime.mm
+    MikageONSMovie.cpp
     MikageONSFiber.S)
 
 add_library(ONSRuntime SHARED
@@ -185,17 +204,35 @@ target_include_directories(ONSRuntime PRIVATE
     "${ONSYURI_DIR}"
     "${MIKAGE_SDL2_EXTRA_INCLUDE}"
     "${CMAKE_CURRENT_SOURCE_DIR}")
+set_source_files_properties(MikageONSMovie.cpp PROPERTIES
+    INCLUDE_DIRECTORIES "${MIKAGE_FFMPEG_ROOT}/include")
+set(MIKAGE_FFMPEG_LIBRARIES)
+foreach(name avformat avcodec swscale swresample avutil)
+    set(library "${MIKAGE_FFMPEG_ROOT}/lib/lib${name}.a")
+    if(NOT EXISTS "${library}")
+        message(FATAL_ERROR "FFmpeg library missing: ${library}")
+    endif()
+    list(APPEND MIKAGE_FFMPEG_LIBRARIES "${library}")
+endforeach()
 target_link_libraries(ONSRuntime PRIVATE
     SDL2::SDL2-static
     SDL2_image
     SDL2_mixer
     SDL2_ttf
     mikage_lua
+    ${MIKAGE_FFMPEG_LIBRARIES}
     bz2
     z
+    iconv
     "-framework Foundation"
     "-framework UIKit"
     "-framework AVFoundation"
+    "-framework AudioToolbox"
+    "-framework CoreMedia"
+    "-framework CoreVideo"
+    "-framework VideoToolbox"
+    "-framework CoreImage"
+    "-framework Security"
     "-framework CoreText"
     "-framework CoreGraphics"
     "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/exported_symbols.txt")

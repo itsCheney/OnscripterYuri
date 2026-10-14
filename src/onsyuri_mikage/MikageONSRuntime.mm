@@ -26,6 +26,7 @@
 
 #include "MikageONSRuntime.h"
 
+#include <dlfcn.h>
 #include <pthread.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -82,6 +83,7 @@ void *callbackContext = nullptr;
 
 bool running = false;
 bool foreground = true;
+bool musicPausedByHost = false;
 bool stopRequested = false;
 int stopSteps = 0;
 bool menuGestureEnabled = false;
@@ -307,6 +309,22 @@ int SDLCALL filterEvent(void *, SDL_Event *event)
     }
 }
 
+// MIDI music plays through the General MIDI SoundFont shipped inside this
+// framework. Without it the synthesizer falls back to sine waves.
+std::string soundFontPath()
+{
+    Dl_info info;
+    if (!dladdr(reinterpret_cast<const void *>(&soundFontPath), &info) || !info.dli_fname)
+        return std::string();
+    std::string path(info.dli_fname);
+    const size_t slash = path.rfind('/');
+    if (slash == std::string::npos)
+        return std::string();
+    path.resize(slash + 1);
+    path += "GeneralUser-GS.sf2";
+    return access(path.c_str(), R_OK) == 0 ? path : std::string();
+}
+
 void setAudioSessionActive(bool active)
 {
     NSError *error = nil;
@@ -447,14 +465,6 @@ extern "C" void MikageONSExit(int status)
     __builtin_unreachable();
 }
 
-// Yuri's iOS build plays movies with its own player; Mikage doesn't ship
-// one yet, so the game continues as if the movie ended.
-extern "C" void playVideoIOS(const char *filename, bool, bool)
-{
-    std::string message = std::string("Skipping movie ") + (filename ? filename : "");
-    log(3, message.c_str());
-}
-
 extern "C" void MikageONSSetLogCallback(MikageONSLogCallback callback)
 {
     logCallback.store(callback, std::memory_order_release);
@@ -528,6 +538,10 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         // engine must not spin a nested run loop on its own stack.
         SDL_iPhoneSetEventPump(SDL_FALSE);
         SDL_SetMainReady();
+        const std::string soundFont = soundFontPath();
+        if (soundFont.empty())
+            log(4, "session.midi.soundfont.missing");
+        Mix_SetSoundFonts(soundFont.empty() ? nullptr : soundFont.c_str());
 
         coding2utf16 = encodingName == "sjis" ? static_cast<Coding2UTF16 *>(new SJIS2UTF16())
                                               : static_cast<Coding2UTF16 *>(new GBK2UTF16());
@@ -540,6 +554,9 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         engine->setFontFile(font.c_str());
         // As on Android: touch players can't rely on keyboard shortcuts.
         engine->enableButtonShortCut();
+        // Both fill the display with a desktop-fullscreen window. Mode 1
+        // keeps the game's aspect ratio with black bars; mode 2 stretches.
+        engine->setFullscreenMode(options->stretchToScreen ? 2 : 1);
 
         menuCallback = menu;
         completionCallback = completion;
@@ -550,6 +567,7 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         running = true;
         foreground = true;
         stopRequested = false;
+        musicPausedByHost = false;
         stopSteps = 0;
         setAudioSessionActive(true);
 
@@ -592,6 +610,24 @@ extern "C" bool MikageONSRequestExit(void)
     return SDL_PushEvent(&event) == 1;
 }
 
+extern "C" bool MikageONSSendBack(void)
+{
+    if (!running || !foreground || !engine || !engine->getWindow())
+        return false;
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.windowID = SDL_GetWindowID(engine->getWindow());
+    event.key.state = SDL_PRESSED;
+    event.key.keysym.scancode = SDL_SCANCODE_ESCAPE;
+    event.key.keysym.sym = SDLK_ESCAPE;
+    if (SDL_PushEvent(&event) != 1)
+        return false;
+    event.type = SDL_KEYUP;
+    event.key.state = SDL_RELEASED;
+    return SDL_PushEvent(&event) == 1;
+}
+
 extern "C" void MikageONSRequestStop(void)
 {
     if (!running)
@@ -606,6 +642,11 @@ extern "C" bool MikageONSSetForeground(bool value)
         return true;
     foreground = value;
     if (!value) {
+        // MIDI music doesn't go through SDL's audio device, so it is paused
+        // on its own; only music that was playing resumes.
+        musicPausedByHost = Mix_PlayingMusic() && !Mix_PausedMusic();
+        if (musicPausedByHost)
+            Mix_PauseMusic();
         Mix_PauseAudio(1);
         setAudioSessionActive(false);
         return lastError.empty();
@@ -613,6 +654,9 @@ extern "C" bool MikageONSSetForeground(bool value)
     lastError.clear();
     setAudioSessionActive(true);
     Mix_PauseAudio(0);
+    if (musicPausedByHost)
+        Mix_ResumeMusic();
+    musicPausedByHost = false;
     return lastError.empty();
 }
 

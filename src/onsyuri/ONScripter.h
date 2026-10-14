@@ -117,6 +117,18 @@ public:
     // The composited frame before scaling, for host screenshots.
     SDL_Surface *getFrameSurface(){ return accumulation_surface; };
     SDL_Window *getWindow(){ return window; };
+#ifdef MIKAGE_ONS_HOST
+    // For the host's movie player: where the game is drawn in the window,
+    // and game files read the way the engine reads them (archives, case).
+    SDL_Rect getRenderViewRect(){ return render_view_rect; };
+    unsigned char *readGameFile(const char *filename, size_t *length){
+        *length = script_h.cBR->getFileLength(filename);
+        if (*length == 0) return NULL;
+        unsigned char *buffer = new unsigned char[*length];
+        script_h.cBR->getFile(filename, buffer);
+        return buffer;
+    };
+#endif
     int  getHeight(){return screen_height;};
     ButtonState &getCurrentButtonState(){return current_button_state;};
     int  getSkip(){return automode_flag?2:((skip_mode&SKIP_NORMAL)?1:0);};

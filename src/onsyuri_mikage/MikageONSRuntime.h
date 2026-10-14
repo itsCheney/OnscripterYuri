@@ -37,6 +37,8 @@ typedef struct MikageONSLaunchOptions {
     // A three-finger tap opens the host menu instead of ONScripter's own
     // right-click menu.
     bool menuGestureEnabled;
+    // Fill the screen instead of keeping the game's aspect ratio.
+    bool stretchToScreen;
 } MikageONSLaunchOptions;
 
 // Starts the game and runs it until its first frame. Returns false with
@@ -54,6 +56,11 @@ void MikageONSStep(void);
 // Asks the game to quit the way closing its window would. ONScripter saves
 // its settings and ends; completion follows on a later step.
 bool MikageONSRequestExit(void);
+
+// Sends the game an Escape key press, which ONScripter treats like a right
+// click: it closes menus and steps back. For games without an on-screen way
+// back. Delivered on the next step.
+bool MikageONSSendBack(void);
 
 // Like RequestExit, but ends the session even if the game doesn't respond.
 void MikageONSRequestStop(void);

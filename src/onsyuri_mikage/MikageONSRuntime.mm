@@ -84,6 +84,19 @@ void *callbackContext = nullptr;
 bool running = false;
 bool foreground = true;
 bool musicPausedByHost = false;
+
+Uint64 nowNS()
+{
+    static const double nsPerTick = 1e9 / SDL_GetPerformanceFrequency();
+    return (Uint64)(SDL_GetPerformanceCounter() * nsPerTick);
+}
+
+// Frame statistics, reset by each MikageONSGetStats.
+Uint64 statsSinceNS = 0;
+Uint64 presentCount = 0;
+Uint64 stepCount = 0;
+Uint64 stepTotalNS = 0;
+Uint64 stepMaxNS = 0;
 bool stopRequested = false;
 int stopSteps = 0;
 bool menuGestureEnabled = false;
@@ -448,6 +461,7 @@ extern "C" int MikageONSWaitEvent(SDL_Event *event)
 extern "C" void MikageONSRenderPresent(SDL_Renderer *renderer)
 {
     SDL_RenderPresent(renderer);
+    ++presentCount;
     // Core Animation shows the frame once the host's run loop turn ends.
     if (isEngineContext())
         yieldToHost();
@@ -569,6 +583,8 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         foreground = true;
         stopRequested = false;
         musicPausedByHost = false;
+        statsSinceNS = 0;
+        presentCount = stepCount = stepTotalNS = stepMaxNS = 0;
         stopSteps = 0;
         setAudioSessionActive(true);
 
@@ -597,8 +613,46 @@ extern "C" void MikageONSStep(void)
     }
     if (!foreground && !stopRequested)
         return;
-    if (resumeEngine())
+    const Uint64 start = nowNS();
+    const bool ended = resumeEngine();
+    const Uint64 elapsed = nowNS() - start;
+    ++stepCount;
+    stepTotalNS += elapsed;
+    if (elapsed > stepMaxNS)
+        stepMaxNS = elapsed;
+    if (ended)
         finishSession();
+}
+
+extern "C" bool MikageONSGetStats(MikageONSStats *stats)
+{
+    if (!stats || !running)
+        return false;
+    memset(stats, 0, sizeof(*stats));
+    const Uint64 now = nowNS();
+    const double seconds = statsSinceNS ? (now - statsSinceNS) / 1e9 : 0;
+    if (seconds > 0) {
+        stats->framesPerSecond = presentCount / seconds;
+        if (presentCount)
+            stats->frameTimeMilliseconds = seconds * 1000.0 / presentCount;
+    }
+    if (stepCount) {
+        stats->cpuFrameTimeMilliseconds = stepTotalNS / 1e6 / stepCount;
+        stats->maxCpuFrameTimeMilliseconds = stepMaxNS / 1e6;
+    }
+    SDL_Renderer *renderer = engine && engine->getWindow() ? SDL_GetRenderer(engine->getWindow()) : nullptr;
+    if (renderer) {
+        int width = 0, height = 0;
+        SDL_GetRendererOutputSize(renderer, &width, &height);
+        stats->drawableWidth = width;
+        stats->drawableHeight = height;
+        SDL_RendererInfo info;
+        if (SDL_GetRendererInfo(renderer, &info) == 0 && info.name)
+            strlcpy(stats->renderer, info.name, sizeof(stats->renderer));
+    }
+    statsSinceNS = now;
+    presentCount = stepCount = stepTotalNS = stepMaxNS = 0;
+    return true;
 }
 
 extern "C" bool MikageONSRequestExit(void)

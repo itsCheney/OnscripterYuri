@@ -88,6 +88,23 @@ typedef struct MikageONSCapturedFrame {
 bool MikageONSCaptureFrame(MikageONSCapturedFrame *frame);
 void MikageONSFreeCapturedFrame(MikageONSCapturedFrame *frame);
 
+// Frame statistics since the previous call, for the host's performance
+// display. Call about once a second; false when no game is running.
+typedef struct MikageONSStats {
+    // Frames the game presented per second, and the average gap between them.
+    double framesPerSecond;
+    double frameTimeMilliseconds;
+    // Time the engine ran per step (one display refresh), average and worst.
+    double cpuFrameTimeMilliseconds;
+    double maxCpuFrameTimeMilliseconds;
+    // Size of the window's drawable in pixels.
+    int32_t drawableWidth;
+    int32_t drawableHeight;
+    // SDL's renderer, e.g. "metal".
+    char renderer[32];
+} MikageONSStats;
+bool MikageONSGetStats(MikageONSStats *stats);
+
 #ifdef __cplusplus
 }
 #endif

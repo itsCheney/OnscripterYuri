@@ -40,6 +40,9 @@ typedef struct MikageONSLaunchOptions {
     // Widen a landscape game narrower than 16:9 (such as 4:3) to 16:9
     // instead of keeping its aspect ratio. Either way it is letterboxed.
     bool stretchToScreen;
+    // Save slot (saveN.dat) to load once the script's define section ends,
+    // instead of starting from the title. 0 starts normally.
+    int32_t loadSlot;
 } MikageONSLaunchOptions;
 
 // Starts the game and runs it until its first frame. Returns false with
@@ -107,6 +110,63 @@ typedef struct MikageONSStats {
     double drawCallsPerFrame;
 } MikageONSStats;
 bool MikageONSGetStats(MikageONSStats *stats);
+
+// Mikage's backlog, save and load panels.
+//
+// With a panel callback set, the game's lookback, save and load screens
+// (from its right-click menu or systemcall) open as host panels instead of
+// ONScripter's own. The engine waits while a panel is open; the host ends
+// it with exactly one of Cancel, Save, Load or Jump. Strings stay valid
+// until then.
+//
+// Save slots are the game's own saveN.dat in the save directory. For each
+// save, the engine also writes Mikage/saveN.jpg (the screen) and
+// Mikage/saveN.json ({"name": speaker, "text": line on screen}) there.
+typedef enum MikageONSPanelKind {
+    MikageONSPanelKindNone = 0,
+    MikageONSPanelKindBacklog = 1,
+    MikageONSPanelKindSave = 2,
+    MikageONSPanelKindLoad = 3,
+} MikageONSPanelKind;
+
+// Called with the panel that opened, and with MikageONSPanelKindNone when the
+// engine closed it itself (the game is ending). Called on the main thread.
+typedef void (*MikageONSPanelCallback)(int32_t panel, void *context);
+// Set before MikageONSStart; NULL keeps ONScripter's own screens.
+void MikageONSSetPanelCallback(MikageONSPanelCallback callback);
+
+// Opens a panel over the game, as its menu would. Only while the game
+// waits for a click on its text; see MikageONSCanOpenPanel.
+bool MikageONSOpenPanel(int32_t panel);
+bool MikageONSCanOpenPanel(void);
+// The open panel, or MikageONSPanelKindNone.
+int32_t MikageONSOpenPanelKind(void);
+// The game's number of save slots (savenumber).
+int32_t MikageONSSaveSlotCount(void);
+
+// Lines shown this session, oldest first; the last is the one on screen.
+typedef struct MikageONSBacklogEntry {
+    // Speaker from the line's [name] tag, or empty. UTF-8.
+    const char *name;
+    // The text as the game showed it, with line breaks. UTF-8.
+    const char *text;
+    bool hasVoice;
+    // The game can go back to where this line began.
+    bool canJump;
+    bool isCurrent;
+} MikageONSBacklogEntry;
+int32_t MikageONSBacklogCount(void);
+bool MikageONSBacklogGetEntry(int32_t index, MikageONSBacklogEntry *entry);
+// Plays the line's voice again; the panel stays open.
+bool MikageONSBacklogReplayVoice(int32_t index);
+
+bool MikageONSPanelCancel(void);
+// Saves to slot 1...MikageONSSaveSlotCount() and closes the panel.
+bool MikageONSPanelSave(int32_t slot);
+// Loads the slot; the game continues from there.
+bool MikageONSPanelLoad(int32_t slot);
+// Goes back to where the line began; later lines leave the backlog.
+bool MikageONSPanelJump(int32_t index);
 
 #ifdef __cplusplus
 }

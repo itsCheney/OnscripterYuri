@@ -2703,6 +2703,11 @@ int ONScripter::gameCommand()
             errorAndExit( lua_handler.error_str );
     }
 #endif
+#ifdef MIKAGE_ONS_HOST
+    // Started from a save in Mikage's library, as if *start began with
+    // loadgame.
+    mikageStartupLoad();
+#endif
 
     return RET_CONTINUE;
 }
@@ -2931,6 +2936,10 @@ int ONScripter::dwaveCommand()
         const char *buf = script_h.readStr();
         int fmt = SOUND_CHUNK;
         if (play_mode == WAVE_PRELOAD) fmt |= SOUND_PRELOAD;
+#ifdef MIKAGE_ONS_HOST
+        // Channel 0 carries the voice of the line about to be shown.
+        if (ch == 0 && play_mode == WAVE_PLAY && !loop_flag) mikageNoteVoice(buf);
+#endif
         playSound(buf, fmt, loop_flag, ch);
     }
         
@@ -2942,6 +2951,9 @@ int ONScripter::dvCommand()
     char buf[256];
     
     sprintf(buf, RELATIVEPATH "voice%c%s.wav", DELIMITER, script_h.getStringBuffer()+2);
+#ifdef MIKAGE_ONS_HOST
+    mikageNoteVoice(buf);
+#endif
     playSound(buf, SOUND_CHUNK, false, 0);
     
     return RET_CONTINUE;

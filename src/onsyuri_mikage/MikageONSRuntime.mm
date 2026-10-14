@@ -24,7 +24,10 @@
 #include "gbk2utf16.h"
 #include "sjis2utf16.h"
 
+#include "MikageONSInternal.h"
 #include "MikageONSRuntime.h"
+
+#import <ImageIO/ImageIO.h>
 
 #include <dlfcn.h>
 #include <pthread.h>
@@ -80,6 +83,7 @@ std::string lastError;
 
 ONScripter *&engine = mikage_ons_engine;
 MikageONSMenuCallback menuCallback = nullptr;
+MikageONSPanelCallback panelCallback = nullptr;
 MikageONSCompletionCallback completionCallback = nullptr;
 void *callbackContext = nullptr;
 
@@ -106,6 +110,8 @@ bool menuGestureEnabled = false;
 bool menuGestureActive = false;
 std::string encodingName;
 std::string savedWorkingDirectory;
+std::string saveDirectoryPath;
+int startupLoadSlot = 0;
 
 void *fiberStack = nullptr;
 void *hostStackPointer = nullptr;
@@ -374,6 +380,7 @@ void tearDownEngine()
             Mix_CloseAudio();
     }
     Mix_Quit();
+    mikage_ons_reset_panels();
     FontInfo::forgetOpenFonts();
     while (TTF_WasInit())
         TTF_Quit();
@@ -388,6 +395,8 @@ void tearDownEngine()
     g_lastpress_time = 0;
     ext_music_play_once_flag = false;
     menuGestureActive = false;
+    startupLoadSlot = 0;
+    saveDirectoryPath.clear();
 
     releaseFiber();
     if (!savedWorkingDirectory.empty())
@@ -436,6 +445,91 @@ extern "C" void MikageONSLogV(int level, const char *format, va_list ap)
         buffer[--length] = '\0';
     if (length)
         log(level, buffer);
+}
+
+void mikage_ons_yield(void)
+{
+    if (isEngineContext())
+        yieldToHost();
+}
+
+bool mikage_ons_stopping(void)
+{
+    return !running || stopRequested;
+}
+
+bool mikage_ons_panels_enabled(void)
+{
+    return panelCallback != nullptr;
+}
+
+void mikage_ons_notify_panel(int panel)
+{
+    if (panelCallback)
+        panelCallback(panel, callbackContext);
+}
+
+int mikage_ons_take_startup_slot(void)
+{
+    const int slot = startupLoadSlot;
+    startupLoadSlot = 0;
+    return slot;
+}
+
+void mikage_ons_log(int level, const char *message)
+{
+    log(level, message);
+}
+
+// Mikage/saveN.jpg and Mikage/saveN.json beside the game's saveN.dat.
+void mikage_ons_write_save_details(int no, SDL_Surface *thumbnail, const char *name, const char *text)
+{
+    if (saveDirectoryPath.empty() || no < 0)
+        return;
+    @autoreleasepool {
+        NSString *folder = [@(saveDirectoryPath.c_str()) stringByAppendingPathComponent:@"Mikage"];
+        [[NSFileManager defaultManager] createDirectoryAtPath:folder
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:nil];
+        NSString *base = [folder stringByAppendingPathComponent:[NSString stringWithFormat:@"save%d", no]];
+
+        NSDictionary *details = @{
+            @"name": @(name ? name : "") ?: @"",
+            @"text": @(text ? text : "") ?: @"",
+        };
+        NSData *json = [NSJSONSerialization dataWithJSONObject:details options:0 error:nil];
+        [json writeToFile:[base stringByAppendingPathExtension:@"json"] atomically:YES];
+
+        NSString *imagePath = [base stringByAppendingPathExtension:@"jpg"];
+        SDL_Surface *rgba = thumbnail ? SDL_ConvertSurfaceFormat(thumbnail, SDL_PIXELFORMAT_ABGR8888, 0) : nullptr;
+        if (!rgba) {
+            [[NSFileManager defaultManager] removeItemAtPath:imagePath error:nil];
+            return;
+        }
+        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+        CGDataProviderRef provider = CGDataProviderCreateWithData(
+            nullptr, rgba->pixels, static_cast<size_t>(rgba->pitch) * rgba->h, nullptr);
+        CGImageRef image = CGImageCreate(rgba->w, rgba->h, 8, 32, rgba->pitch, space,
+                                         kCGBitmapByteOrder32Big | kCGImageAlphaNoneSkipLast,
+                                         provider, nullptr, true, kCGRenderingIntentDefault);
+        if (image) {
+            NSMutableData *jpeg = [NSMutableData data];
+            CGImageDestinationRef destination = CGImageDestinationCreateWithData(
+                (__bridge CFMutableDataRef)jpeg, CFSTR("public.jpeg"), 1, nullptr);
+            if (destination) {
+                NSDictionary *properties = @{(__bridge NSString *)kCGImageDestinationLossyCompressionQuality: @0.8};
+                CGImageDestinationAddImage(destination, image, (__bridge CFDictionaryRef)properties);
+                if (CGImageDestinationFinalize(destination))
+                    [jpeg writeToFile:imagePath atomically:YES];
+                CFRelease(destination);
+            }
+            CGImageRelease(image);
+        }
+        CGDataProviderRelease(provider);
+        CGColorSpaceRelease(space);
+        SDL_FreeSurface(rgba);
+    }
 }
 
 extern "C" void MikageONSDelay(Uint32 ms)
@@ -492,6 +586,11 @@ extern "C" void MikageONSExit(int status)
 extern "C" void MikageONSSetLogCallback(MikageONSLogCallback callback)
 {
     logCallback.store(callback, std::memory_order_release);
+}
+
+extern "C" void MikageONSSetPanelCallback(MikageONSPanelCallback callback)
+{
+    panelCallback = callback;
 }
 
 extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
@@ -583,6 +682,8 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         engine->setFullscreenMode(1);
         engine->setStretchTo16x9(options->stretchToScreen);
 
+        saveDirectoryPath = saveDirectory;
+        startupLoadSlot = options->loadSlot > 0 ? options->loadSlot : 0;
         menuCallback = menu;
         completionCallback = completion;
         callbackContext = context;

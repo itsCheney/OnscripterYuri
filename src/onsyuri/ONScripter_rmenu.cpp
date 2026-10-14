@@ -128,16 +128,27 @@ void ONScripter::leaveSystemCall( bool restore_flag )
     refreshMouseOverButton();
 
     system_menu_mode = SYSTEM_NULL;
+#ifdef MIKAGE_ONS_HOST
+    mikageNoteSystemCallEnd();
+#endif
 }
 
 int ONScripter::executeSystemCall()
 {
     SDL_BlitSurface( text_info.image_surface, NULL, backup_surface, NULL );
     
+#ifdef MIKAGE_ONS_HOST
+    mikageNoteSystemCallStart();
+#endif
     enterSystemCall();
 
     while(system_menu_mode != SYSTEM_NULL){
         dirty_rect.fill( screen_width, screen_height );
+#ifdef MIKAGE_ONS_HOST
+        int mikage_ret = mikageExecuteSystemCall();
+        if (mikage_ret == 1 || mikage_ret == 2) return mikage_ret;
+        if (mikage_ret == 0) continue;
+#endif
         switch(system_menu_mode){
           case SYSTEM_SKIP:
             executeSystemSkip();

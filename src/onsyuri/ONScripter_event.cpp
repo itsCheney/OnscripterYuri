@@ -37,6 +37,10 @@
 #define ONS_CHUNK_EVENT   (SDL_USEREVENT+4)
 #define ONS_BREAK_EVENT   (SDL_USEREVENT+5)
 #define ONS_BGMFADE_EVENT (SDL_USEREVENT+6)
+#ifdef MIKAGE_ONS_HOST
+// Pushed by MikageONSOpenPanel; the code is the system call to open.
+#define ONS_MIKAGE_PANEL_EVENT (SDL_USEREVENT+16)
+#endif
 
 // This sets up the fade event flag for use in bgm fadeout and fadein.
 #define BGM_FADEOUT 0
@@ -1335,6 +1339,12 @@ void ONScripter::runEventLoop()
           case ONS_TIMER_EVENT:
             timerEvent(false);
             break;
+
+#ifdef MIKAGE_ONS_HOST
+          case ONS_MIKAGE_PANEL_EVENT:
+            if (mikageOpenPanelFromHost(event.user.code)) return;
+            break;
+#endif
 
           case ONS_MUSIC_EVENT:
           case ONS_BGMFADE_EVENT:

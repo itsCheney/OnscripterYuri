@@ -1232,6 +1232,9 @@ void ONScripter::deleteSelectLink()
 
 void ONScripter::clearCurrentPage()
 {
+#ifdef MIKAGE_ONS_HOST
+    mikageNotePageClear();
+#endif
     sentence_font.clear();
 
     int num = (sentence_font.num_xy[0]*2+1)*sentence_font.num_xy[1];

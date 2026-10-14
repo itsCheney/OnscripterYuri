@@ -457,6 +457,9 @@ void ONScripter::enterTextDisplayMode(bool text_flag)
     if (line_enter_status <= 1 && (!pretextgosub_label || saveon_flag) && internal_saveon_flag && text_flag){
         storeSaveFile();
         internal_saveon_flag = false;
+#ifdef MIKAGE_ONS_HOST
+        mikageNoteSavePoint();
+#endif
     }
     
     if (!(display_mode & DISPLAY_MODE_TEXT)){
@@ -684,6 +687,9 @@ int ONScripter::textCommand()
     if (line_enter_status <= 1 && (!pretextgosub_label || saveon_flag) && internal_saveon_flag){
         storeSaveFile();
         internal_saveon_flag = false;
+#ifdef MIKAGE_ONS_HOST
+        mikageNoteSavePoint();
+#endif
     }
 
     char *buf = script_h.getStringBuffer();

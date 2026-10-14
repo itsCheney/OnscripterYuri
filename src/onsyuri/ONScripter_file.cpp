@@ -275,6 +275,9 @@ int ONScripter::writeSaveFile( int no, const char *savestr )
         utils::printError("can't open save file %s for writing\n", filename );
         return -1;
     }
+#ifdef MIKAGE_ONS_HOST
+    mikageNoteSaveWritten(no);
+#endif
 #if defined(WEB)
     EM_ASM(
         if(window.flush_save) window.flush_save();

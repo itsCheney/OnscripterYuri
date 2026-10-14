@@ -26,6 +26,9 @@
 
 int ONScripter::loadSaveFile2( int file_version )
 {
+#ifdef MIKAGE_ONS_HOST
+    mikageNoteLoad();
+#endif
     stopSMPEG();
     deleteNestInfo();
     

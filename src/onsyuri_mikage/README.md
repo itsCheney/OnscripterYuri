@@ -8,6 +8,7 @@ Builds ONScripter Yuri as `ONSRuntime.framework`, the ONScripter engine of [Mika
 - **The app keeps its main loop.** ONScripter blocks in `SDL_WaitEvent` and ends with `exit()`. Here it runs on its own stack on the main thread (`MikageONSFiber.S`). `MikageONSHooks.h` is force-included into the engine sources and sends `SDL_WaitEvent`, `SDL_Delay`, `SDL_RenderPresent` and `exit` to the host. Each of these hands control back to Mikage, and the next display refresh (`MikageONSStep`) resumes the engine.
 - **MIDI and movies.** SDL_mixer's native MIDI backend is macOS-only, so `native_midi_ios.c` replaces it: each song plays through Apple's MIDI synthesizer with the SoundFont the host passes to `Mix_SetSoundFonts` (Mikage ships GeneralUser GS inside the framework). Movies (`mpegplay`, `movie`, `avi`) are decoded with FFmpeg in `MikageONSMovie.cpp` and drawn into the game's window, with their sound mixed through SDL_mixer. The build links FFmpeg's static libraries from `MIKAGE_FFMPEG_ROOT`.
 - **Host API.** `MikageONSRuntime.h` replaces `onscripter_main.cpp`. It covers starting a game, stepping, quitting, background/foreground, the engine window and screenshots. It detects Shift_JIS, GBK or UTF-8 scripts. When the game folder has no `default.ttf`, it uses a system font (Hiragino Sans for Japanese, PingFang for Chinese).
+- **Backlog and saves.** With a panel callback, the game's lookback, save and load screens open as the host's own panels (`ONScripter_mikage.cpp`). The backlog keeps each text page of the session with its voice and a compressed copy of the page's save point, so the newest 200 lines can be jumped back to. Saves stay the game's own `saveN.dat`; each also gets `Mikage/saveN.jpg` and `Mikage/saveN.json` (the screen and the line) for the host's save lists. A launch can also start straight from a save slot.
 
 ## Engine changes
 
@@ -18,6 +19,7 @@ They are small and inactive outside this build:
 - `ONScripter::getWindow()` and `getFrameSurface()` give the host the window and the last frame; `getRenderViewRect()` and `readGameFile()` let the movie player draw over the game and read files from archives.
 - A window size change recomputes where the game is drawn, as a resize does.
 - The iOS `playAVI` path no longer uses an undefined `loop_flag`.
+- Text save points, page clears, loads, channel 0 voices, written saves and system calls are reported to `ONScripter_mikage.cpp`, which can take over the lookback, save and load system calls. The `game` command loads the launch's save slot, if any.
 
 ## Building
 

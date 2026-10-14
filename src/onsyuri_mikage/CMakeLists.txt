@@ -176,6 +176,7 @@ list(TRANSFORM ONSYURI_SOURCES PREPEND "${ONSYURI_DIR}/")
 # onscripter_main.cpp is replaced by the host API.
 set(HOST_SOURCES
     MikageONSRuntime.mm
+    ONScripter_mikage.cpp
     MikageONSMovie.cpp
     MikageONSFiber.S)
 
@@ -185,7 +186,7 @@ add_library(ONSRuntime SHARED
     MikageONSRuntime.h)
 
 # The engine's waits, presents and exit() go through the host.
-set_source_files_properties(${ONSYURI_SOURCES} PROPERTIES
+set_source_files_properties(${ONSYURI_SOURCES} ONScripter_mikage.cpp PROPERTIES
     COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/MikageONSHooks.h")
 set_source_files_properties(MikageONSRuntime.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 
@@ -235,6 +236,7 @@ target_link_libraries(ONSRuntime PRIVATE
     "-framework Security"
     "-framework CoreText"
     "-framework CoreGraphics"
+    "-framework ImageIO"
     "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/exported_symbols.txt")
 
 set_target_properties(ONSRuntime PROPERTIES

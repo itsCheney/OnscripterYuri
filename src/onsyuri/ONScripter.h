@@ -130,6 +130,33 @@ public:
         script_h.cBR->getFile(filename, buffer);
         return buffer;
     };
+
+    // Mikage's backlog, save and load panels, which stand in for the
+    // engine's own lookback, save and load screens. Defined in
+    // onsyuri_mikage/ONScripter_mikage.cpp.
+    void mikageNoteSavePoint();
+    void mikageNotePageClear();
+    void mikageNoteLoad();
+    void mikageNoteVoice(const char *filename);
+    void mikageNoteSaveWritten(int no);
+    void mikageNoteSystemCallStart();
+    void mikageNoteSystemCallEnd();
+    // What executeSystemCall should return, or -1 to run ONScripter's own.
+    int  mikageExecuteSystemCall();
+    // A panel the host asked for; true when it ends the event loop.
+    bool mikageOpenPanelFromHost(int panel);
+    bool mikageCanOpenPanel();
+    void mikageStartupLoad();
+    void mikageReplayVoice(const char *filename);
+    int  mikageSaveSlotCount(){ return (int)num_save_file; };
+    const char *mikageSaveDir(){ return save_dir; };
+private:
+    int  mikageRunPanel(int panel);
+    bool mikageLoad(int no, const unsigned char *data, size_t length);
+    void mikageAfterLoad(int no);
+    void mikageCaptureEntryText(void *entry);
+    SDL_Surface *mikageThumbnail(SDL_Surface *frame);
+public:
 #endif
     int  getHeight(){return screen_height;};
     ButtonState &getCurrentButtonState(){return current_button_state;};

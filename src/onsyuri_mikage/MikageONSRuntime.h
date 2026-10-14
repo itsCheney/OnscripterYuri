@@ -102,6 +102,9 @@ typedef struct MikageONSStats {
     int32_t drawableHeight;
     // SDL's renderer, e.g. "metal".
     char renderer[32];
+    // Textures the engine drew per presented frame. SDL may batch them
+    // into fewer GPU draw calls.
+    double drawCallsPerFrame;
 } MikageONSStats;
 bool MikageONSGetStats(MikageONSStats *stats);
 

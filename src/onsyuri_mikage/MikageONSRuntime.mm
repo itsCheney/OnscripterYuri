@@ -60,6 +60,8 @@ extern "C" {
 void MikageONSDelay(Uint32 ms);
 int MikageONSWaitEvent(SDL_Event *event);
 void MikageONSRenderPresent(SDL_Renderer *renderer);
+int MikageONSRenderCopy(SDL_Renderer *renderer, SDL_Texture *texture,
+                        const SDL_Rect *source, const SDL_Rect *target);
 __attribute__((noreturn)) void MikageONSExit(int status);
 void MikageONSLogV(int level, const char *format, va_list ap);
 }
@@ -94,6 +96,7 @@ Uint64 nowNS()
 // Frame statistics, reset by each MikageONSGetStats.
 Uint64 statsSinceNS = 0;
 Uint64 presentCount = 0;
+Uint64 drawCount = 0;
 Uint64 stepCount = 0;
 Uint64 stepTotalNS = 0;
 Uint64 stepMaxNS = 0;
@@ -458,6 +461,13 @@ extern "C" int MikageONSWaitEvent(SDL_Event *event)
     }
 }
 
+extern "C" int MikageONSRenderCopy(SDL_Renderer *renderer, SDL_Texture *texture,
+                                   const SDL_Rect *source, const SDL_Rect *target)
+{
+    ++drawCount;
+    return SDL_RenderCopy(renderer, texture, source, target);
+}
+
 extern "C" void MikageONSRenderPresent(SDL_Renderer *renderer)
 {
     SDL_RenderPresent(renderer);
@@ -584,7 +594,7 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         stopRequested = false;
         musicPausedByHost = false;
         statsSinceNS = 0;
-        presentCount = stepCount = stepTotalNS = stepMaxNS = 0;
+        presentCount = drawCount = stepCount = stepTotalNS = stepMaxNS = 0;
         stopSteps = 0;
         setAudioSessionActive(true);
 
@@ -633,8 +643,10 @@ extern "C" bool MikageONSGetStats(MikageONSStats *stats)
     const double seconds = statsSinceNS ? (now - statsSinceNS) / 1e9 : 0;
     if (seconds > 0) {
         stats->framesPerSecond = presentCount / seconds;
-        if (presentCount)
+        if (presentCount) {
             stats->frameTimeMilliseconds = seconds * 1000.0 / presentCount;
+            stats->drawCallsPerFrame = static_cast<double>(drawCount) / presentCount;
+        }
     }
     if (stepCount) {
         stats->cpuFrameTimeMilliseconds = stepTotalNS / 1e6 / stepCount;
@@ -651,7 +663,7 @@ extern "C" bool MikageONSGetStats(MikageONSStats *stats)
             strlcpy(stats->renderer, info.name, sizeof(stats->renderer));
     }
     statsSinceNS = now;
-    presentCount = stepCount = stepTotalNS = stepMaxNS = 0;
+    presentCount = drawCount = stepCount = stepTotalNS = stepMaxNS = 0;
     return true;
 }
 

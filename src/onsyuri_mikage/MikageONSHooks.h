@@ -21,6 +21,8 @@ extern "C" {
 void MikageONSDelay(Uint32 ms);
 int MikageONSWaitEvent(SDL_Event *event);
 void MikageONSRenderPresent(SDL_Renderer *renderer);
+int MikageONSRenderCopy(SDL_Renderer *renderer, SDL_Texture *texture,
+                        const SDL_Rect *source, const SDL_Rect *target);
 __attribute__((noreturn)) void MikageONSExit(int status);
 
 #ifdef __cplusplus
@@ -30,6 +32,8 @@ __attribute__((noreturn)) void MikageONSExit(int status);
 #define SDL_Delay(ms) MikageONSDelay(ms)
 #define SDL_WaitEvent(event) MikageONSWaitEvent(event)
 #define SDL_RenderPresent(renderer) MikageONSRenderPresent(renderer)
+// Counted for the host's draw call statistic.
+#define SDL_RenderCopy(renderer, texture, source, target) MikageONSRenderCopy(renderer, texture, source, target)
 #define exit(status) MikageONSExit(status)
 
 #endif

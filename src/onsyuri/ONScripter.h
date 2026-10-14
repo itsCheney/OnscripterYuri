@@ -121,6 +121,8 @@ public:
     // For the host's movie player: where the game is drawn in the window,
     // and game files read the way the engine reads them (archives, case).
     SDL_Rect getRenderViewRect(){ return render_view_rect; };
+    // Widens a landscape game narrower than 16:9 (such as 4:3) to 16:9.
+    void setStretchTo16x9(bool enabled){ stretch_to_16x9 = enabled; };
     unsigned char *readGameFile(const char *filename, size_t *length){
         *length = script_h.cBR->getFileLength(filename);
         if (*length == 0) return NULL;
@@ -347,6 +349,9 @@ public:
     void stopSMPEG();
     void updateEffectDst();
     
+#ifdef MIKAGE_ONS_HOST
+    bool stretch_to_16x9 = false;
+#endif
 private:
     // ----------------------------------------
     // global variables and methods

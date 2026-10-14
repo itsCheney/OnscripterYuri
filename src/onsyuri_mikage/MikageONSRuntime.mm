@@ -554,9 +554,10 @@ extern "C" bool MikageONSStart(const MikageONSLaunchOptions *options,
         engine->setFontFile(font.c_str());
         // As on Android: touch players can't rely on keyboard shortcuts.
         engine->enableButtonShortCut();
-        // Both fill the display with a desktop-fullscreen window. Mode 1
-        // keeps the game's aspect ratio with black bars; mode 2 stretches.
-        engine->setFullscreenMode(options->stretchToScreen ? 2 : 1);
+        // A desktop-fullscreen window that keeps the game's aspect ratio
+        // with black bars, or widens a 4:3 game to 16:9 when asked.
+        engine->setFullscreenMode(1);
+        engine->setStretchTo16x9(options->stretchToScreen);
 
         menuCallback = menu;
         completionCallback = completion;
@@ -648,8 +649,11 @@ extern "C" bool MikageONSSetForeground(bool value)
         if (musicPausedByHost)
             Mix_PauseMusic();
         Mix_PauseAudio(1);
-        setAudioSessionActive(false);
-        return lastError.empty();
+        // The audio session stays active: deactivating it stops SDL's running
+        // audio queue, which SDL doesn't restart, and the game came back
+        // silent.
+        lastError.clear();
+        return true;
     }
     lastError.clear();
     setAudioSessionActive(true);

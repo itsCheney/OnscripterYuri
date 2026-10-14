@@ -80,6 +80,12 @@ void ONScripter::calcRenderRect() {
 
     bool shouldAlign = (!stretch_mode || !fullscreen_mode) && (!force_window_height || !force_window_width);
 
+#ifdef MIKAGE_ONS_HOST
+    if (stretch_to_16x9 && screen_width >= screen_height && screen_width * 9 < screen_height * 16) {
+        // The game is widened to 16:9, then letterboxed like any other.
+        alignAspectRatio(screen_height * 16 / 9, screen_height, screen_device_width, screen_device_height);
+    } else
+#endif
     if (shouldAlign) {
         alignAspectRatio(screen_width, screen_height, screen_device_width, screen_device_height);
     }

@@ -37,7 +37,8 @@ typedef struct MikageONSLaunchOptions {
     // A three-finger tap opens the host menu instead of ONScripter's own
     // right-click menu.
     bool menuGestureEnabled;
-    // Fill the screen instead of keeping the game's aspect ratio.
+    // Widen a landscape game narrower than 16:9 (such as 4:3) to 16:9
+    // instead of keeping its aspect ratio. Either way it is letterboxed.
     bool stretchToScreen;
 } MikageONSLaunchOptions;
 

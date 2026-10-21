@@ -150,6 +150,11 @@ public:
     void mikageReplayVoice(const char *filename);
     int  mikageSaveSlotCount(){ return (int)num_save_file; };
     const char *mikageSaveDir(){ return save_dir; };
+    // A quick action or game menu command from the host (MikageONSCommand);
+    // true when it ends the event loop.
+    bool mikageRunCommand(int command);
+    // Auto and skip as the host shows them (MikageONSControl bits).
+    uint32_t mikageControls();
 private:
     int  mikageRunPanel(int panel);
     bool mikageLoad(int no, const unsigned char *data, size_t length);

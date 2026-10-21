@@ -796,6 +796,37 @@ extern "C" bool MikageONSSendBack(void)
     return SDL_PushEvent(&event) == 1;
 }
 
+extern "C" bool MikageONSSetControlSkip(bool held)
+{
+    if (!running || !engine || !engine->getWindow())
+        return false;
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = held ? SDL_KEYDOWN : SDL_KEYUP;
+    event.key.windowID = SDL_GetWindowID(engine->getWindow());
+    event.key.state = held ? SDL_PRESSED : SDL_RELEASED;
+    event.key.keysym.scancode = SDL_SCANCODE_LCTRL;
+    event.key.keysym.sym = SDLK_LCTRL;
+    return SDL_PushEvent(&event) == 1;
+}
+
+extern "C" bool MikageONSSendPointer(int32_t phase, float x, float y)
+{
+    if (!running || !foreground || !engine || !engine->getWindow() || phase < 0 || phase > 4)
+        return false;
+    int width = 0, height = 0;
+    SDL_GetWindowSize(engine->getWindow(), &width, &height);
+    if (width <= 0 || height <= 0)
+        return false;
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = SDL_USEREVENT + 18; // ONS_MIKAGE_POINTER_EVENT
+    event.user.code = phase;
+    event.user.data1 = (void *)(intptr_t)(SDL_clamp(x / width, 0.0f, 1.0f) * 65535);
+    event.user.data2 = (void *)(intptr_t)(SDL_clamp(y / height, 0.0f, 1.0f) * 65535);
+    return SDL_PushEvent(&event) == 1;
+}
+
 extern "C" void MikageONSRequestStop(void)
 {
     if (!running)

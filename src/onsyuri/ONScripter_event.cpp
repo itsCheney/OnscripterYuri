@@ -40,6 +40,8 @@
 #ifdef MIKAGE_ONS_HOST
 // Pushed by MikageONSOpenPanel; the code is the system call to open.
 #define ONS_MIKAGE_PANEL_EVENT (SDL_USEREVENT+16)
+#define ONS_MIKAGE_COMMAND_EVENT (SDL_USEREVENT+17)
+#define ONS_MIKAGE_POINTER_EVENT (SDL_USEREVENT+18)
 #endif
 
 // This sets up the fade event flag for use in bgm fadeout and fadein.
@@ -1343,6 +1345,43 @@ void ONScripter::runEventLoop()
 #ifdef MIKAGE_ONS_HOST
           case ONS_MIKAGE_PANEL_EVENT:
             if (mikageOpenPanelFromHost(event.user.code)) return;
+            break;
+
+          case ONS_MIKAGE_COMMAND_EVENT:
+            if (mikageRunCommand(event.user.code)) return;
+            break;
+
+          // The host's trackpad cursor, as a desktop mouse. The position is
+          // a fraction of the window, in 1/65535ths.
+          case ONS_MIKAGE_POINTER_EVENT:
+          {
+            const int phase = event.user.code;
+            const float nx = (intptr_t)event.user.data1 / 65535.0f;
+            const float ny = (intptr_t)event.user.data2 / 65535.0f;
+            const int x = (device_width * nx - render_view_rect.x) * screen_scale_ratio1;
+            const int y = (device_height * ny - render_view_rect.y) * screen_scale_ratio2;
+            if (phase == 0) {
+                tmp_event.motion.x = x;
+                tmp_event.motion.y = y;
+                if (mouseMoveEvent( &tmp_event.motion )) return;
+                break;
+            }
+            const bool down = phase == 1 || phase == 3;
+            tmp_event.button.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
+            tmp_event.button.button = phase >= 3 ? SDL_BUTTON_RIGHT : SDL_BUTTON_LEFT;
+            tmp_event.button.x = x;
+            tmp_event.button.y = y;
+            // A long press opens the right-click menu, as on touch.
+            tmp_event.button.timestamp = event.user.timestamp;
+            current_button_state.event_type = tmp_event.button.type;
+            current_button_state.event_button = tmp_event.button.button;
+            if (down) {
+                if (tmp_event.button.button == SDL_BUTTON_LEFT)
+                    g_lastpress_time = event.user.timestamp;
+                if (!btndown_flag) break;
+            }
+            if (mousePressEvent( &tmp_event.button )) return;
+          }
             break;
 #endif
 

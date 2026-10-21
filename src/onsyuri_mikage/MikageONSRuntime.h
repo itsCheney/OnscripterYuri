@@ -168,6 +168,46 @@ bool MikageONSPanelLoad(int32_t slot);
 // Goes back to where the line began; later lines leave the backlog.
 bool MikageONSPanelJump(int32_t index);
 
+// Quick actions and the game menu's playback controls.
+typedef enum MikageONSCommand {
+    // Toggle auto mode or skip mode, as the a and s keys do. Skip follows
+    // the game's kidokuskip setting.
+    MikageONSCommandAuto = 1,
+    MikageONSCommandSkip = 2,
+    // Save to or load from MikageONSQuickSaveSlot, while the game waits on
+    // its text (MikageONSCanOpenPanel).
+    MikageONSCommandQuickSave = 3,
+    MikageONSCommandQuickLoad = 4,
+} MikageONSCommand;
+
+// The quick save's own slot, outside the game's save menu.
+#define MikageONSQuickSaveSlot 1000
+
+typedef enum MikageONSControl {
+    MikageONSControlAuto = 1 << 0,
+    MikageONSControlSkip = 1 << 1,
+    MikageONSControlCanAuto = 1 << 8,
+    MikageONSControlCanSkip = 1 << 9,
+    MikageONSControlCanQuickSave = 1 << 10,
+    MikageONSControlCanQuickLoad = 1 << 11,
+} MikageONSControl;
+
+// Queues the command for the engine; it runs at the next event check.
+bool MikageONSRunCommand(int32_t command);
+uint32_t MikageONSGameControls(void);
+// Holds or releases Ctrl, which skips every line (read or not) while held.
+bool MikageONSSetControlSkip(bool held);
+
+// The host's trackpad cursor: a mouse at x, y in window points.
+typedef enum MikageONSPointerPhase {
+    MikageONSPointerMove = 0,
+    MikageONSPointerDown = 1,
+    MikageONSPointerUp = 2,
+    MikageONSPointerSecondaryDown = 3,
+    MikageONSPointerSecondaryUp = 4,
+} MikageONSPointerPhase;
+bool MikageONSSendPointer(int32_t phase, float x, float y);
+
 #ifdef __cplusplus
 }
 #endif

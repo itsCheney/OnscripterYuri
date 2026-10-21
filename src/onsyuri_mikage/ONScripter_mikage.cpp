@@ -21,6 +21,7 @@ extern Coding2UTF16 *coding2utf16;
 extern ONScripter *mikage_ons_engine;
 
 #define ONS_MIKAGE_PANEL_EVENT (SDL_USEREVENT+16)
+#define ONS_MIKAGE_COMMAND_EVENT (SDL_USEREVENT+17)
 
 namespace {
 
@@ -57,6 +58,10 @@ int replayRequest = -1;
 // The open page's text while a panel shows it.
 std::string currentName;
 std::string currentText;
+
+// A quick save or load the host asked for runs as the save or load panel
+// would, without showing it.
+int quickPanel = MikageONSPanelKindNone;
 
 // The screen as the game's menu opened, before any menu covered it.
 SDL_Surface *menuThumbnail = nullptr;
@@ -362,7 +367,13 @@ int ONScripter::mikageRunPanel(int panel)
     openPanel = panel;
     action = Action::None;
     replayRequest = -1;
-    mikage_ons_notify_panel(panel);
+    if (quickPanel == panel) {
+        action = panel == MikageONSPanelKindSave ? Action::Save : Action::Load;
+        actionArgument = MikageONSQuickSaveSlot;
+    } else {
+        mikage_ons_notify_panel(panel);
+    }
+    quickPanel = MikageONSPanelKindNone;
     while (action == Action::None) {
         if (replayRequest >= 0) {
             const int index = replayRequest;
@@ -502,6 +513,65 @@ void ONScripter::mikageStartupLoad()
     mp3fadeout_duration = fadeout;
 }
 
+bool ONScripter::mikageRunCommand(int command)
+{
+    switch (command) {
+    case MikageONSCommandAuto:
+        if (automode_flag) {
+            automode_flag = false;
+            return false;
+        }
+        // As the a key does.
+        if (!(event_mode & WAIT_INPUT_MODE))
+            return false;
+        automode_flag = true;
+        skip_mode &= ~SKIP_NORMAL;
+        stopAnimation(clickstr_state);
+        return true;
+    case MikageONSCommandSkip:
+        if (skip_mode & SKIP_NORMAL) {
+            skip_mode &= ~SKIP_NORMAL;
+            return false;
+        }
+        // As the s key does: with kidokuskip, it stops at unread text.
+        if (!(event_mode & WAIT_INPUT_MODE))
+            return false;
+        automode_flag = false;
+        skip_mode |= SKIP_NORMAL;
+        stopAnimation(clickstr_state);
+        return true;
+    case MikageONSCommandQuickSave:
+    case MikageONSCommandQuickLoad: {
+        const int panel = command == MikageONSCommandQuickSave ? MikageONSPanelKindSave : MikageONSPanelKindLoad;
+        if (!mikageOpenPanelFromHost(panel))
+            return false;
+        quickPanel = panel;
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+uint32_t ONScripter::mikageControls()
+{
+    uint32_t controls = MikageONSControlCanAuto | MikageONSControlCanSkip;
+    if (automode_flag)
+        controls |= MikageONSControlAuto;
+    if (skip_mode & SKIP_NORMAL)
+        controls |= MikageONSControlSkip;
+    if (mikageCanOpenPanel()) {
+        controls |= MikageONSControlCanQuickSave;
+        std::string path = save_dir ? save_dir : "";
+        path += "save" + std::to_string(MikageONSQuickSaveSlot) + ".dat";
+        if (FILE *file = fopen(path.c_str(), "rb")) {
+            fclose(file);
+            controls |= MikageONSControlCanQuickLoad;
+        }
+    }
+    return controls;
+}
+
 // Host API. The engine waits in mikageRunPanel while these are called.
 
 extern "C" bool MikageONSOpenPanel(int32_t panel)
@@ -514,6 +584,22 @@ extern "C" bool MikageONSOpenPanel(int32_t panel)
     event.type = ONS_MIKAGE_PANEL_EVENT;
     event.user.code = panel;
     return SDL_PushEvent(&event) == 1;
+}
+
+extern "C" bool MikageONSRunCommand(int32_t command)
+{
+    if (!mikage_ons_engine || command < MikageONSCommandAuto || command > MikageONSCommandQuickLoad)
+        return false;
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = ONS_MIKAGE_COMMAND_EVENT;
+    event.user.code = command;
+    return SDL_PushEvent(&event) == 1;
+}
+
+extern "C" uint32_t MikageONSGameControls(void)
+{
+    return mikage_ons_engine ? mikage_ons_engine->mikageControls() : 0;
 }
 
 extern "C" bool MikageONSCanOpenPanel(void)
@@ -607,4 +693,5 @@ void mikage_ons_reset_panels(void)
     currentText.clear();
     freeMenuThumbnail();
     inSystemCall = false;
+    quickPanel = MikageONSPanelKindNone;
 }

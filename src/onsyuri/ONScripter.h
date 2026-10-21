@@ -155,6 +155,7 @@ public:
     bool mikageRunCommand(int command);
     // Auto and skip as the host shows them (MikageONSControl bits).
     uint32_t mikageControls();
+    uint32_t mikageWaitState();
 private:
     int  mikageRunPanel(int panel);
     bool mikageLoad(int no, const unsigned char *data, size_t length);

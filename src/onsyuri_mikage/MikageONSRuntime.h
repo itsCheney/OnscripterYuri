@@ -195,6 +195,9 @@ typedef enum MikageONSControl {
 // Queues the command for the engine; it runs at the next event check.
 bool MikageONSRunCommand(int32_t command);
 uint32_t MikageONSGameControls(void);
+// For the diagnostics log: event_mode in the low 16 bits, then
+// current_mode, system_menu_mode and the open panel, 8, 4 and 4 bits.
+uint32_t MikageONSWaitState(void);
 // Holds or releases Ctrl, which skips every line (read or not) while held.
 bool MikageONSSetControlSkip(bool held);
 

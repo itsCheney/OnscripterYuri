@@ -572,6 +572,12 @@ uint32_t ONScripter::mikageControls()
     return controls;
 }
 
+uint32_t ONScripter::mikageWaitState()
+{
+    return (uint32_t)(event_mode & 0xffff) | ((uint32_t)(current_mode & 0xff) << 16) |
+           ((uint32_t)(system_menu_mode & 0xf) << 24) | ((uint32_t)(openPanel & 0xf) << 28);
+}
+
 // Host API. The engine waits in mikageRunPanel while these are called.
 
 extern "C" bool MikageONSOpenPanel(int32_t panel)
@@ -600,6 +606,11 @@ extern "C" bool MikageONSRunCommand(int32_t command)
 extern "C" uint32_t MikageONSGameControls(void)
 {
     return mikage_ons_engine ? mikage_ons_engine->mikageControls() : 0;
+}
+
+extern "C" uint32_t MikageONSWaitState(void)
+{
+    return mikage_ons_engine ? mikage_ons_engine->mikageWaitState() : 0;
 }
 
 extern "C" bool MikageONSCanOpenPanel(void)

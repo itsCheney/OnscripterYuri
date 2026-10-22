@@ -323,9 +323,14 @@ int ONScripter::mikageExecuteSystemCall()
 
 bool ONScripter::mikageCanOpenPanel()
 {
+    // A text wait, or the waits that scripts drawing their own text box
+    // use instead (click, delay, btnwait). waitEvent runs the system call
+    // after any of them; an effect's bare input wait is left alone.
+    const bool scriptWait = (event_mode & (WAIT_INPUT_MODE | WAIT_BUTTON_MODE)) &&
+                            (event_mode & (WAIT_TIMER_MODE | WAIT_BUTTON_MODE));
     return mikage_ons_panels_enabled() && openPanel == MikageONSPanelKindNone &&
-           current_mode == NORMAL_MODE && system_menu_mode == SYSTEM_NULL &&
-           (event_mode & WAIT_TEXT_MODE);
+           current_mode == NORMAL_MODE && system_menu_mode == SYSTEM_NULL && !inSystemCall &&
+           ((event_mode & WAIT_TEXT_MODE) || scriptWait);
 }
 
 bool ONScripter::mikageOpenPanelFromHost(int panel)

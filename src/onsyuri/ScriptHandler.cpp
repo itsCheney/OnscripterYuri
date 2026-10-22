@@ -24,6 +24,7 @@
  */
 
 #include "ScriptHandler.h"
+#include <string>
 #include "Utils.h"
 #include "coding2utf16.h"
 
@@ -152,17 +153,15 @@ void ScriptHandler::setSaveDir(const char *path)
 
 FILE *ScriptHandler::fopen( const char *path, const char *mode, bool use_save_dir )
 {
-    char filename[256];
-    if (use_save_dir && save_dir)
-        sprintf( filename, "%s%s", save_dir, path );
-    else
-        sprintf( filename, "%s%s", archive_path, path );
+    // Game and save folders can be long absolute paths (iOS containers).
+    std::string filename = (use_save_dir && save_dir) ? save_dir : archive_path;
+    filename += path;
 
-    for ( unsigned int i=0 ; i<strlen( filename ) ; i++ )
+    for ( size_t i=0 ; i<filename.size() ; i++ )
         if ( filename[i] == '/' || filename[i] == '\\' )
             filename[i] = DELIMITER;
 
-    return ::fopen( filename, mode );
+    return ::fopen( filename.c_str(), mode );
 }
 
 void ScriptHandler::setKeyTable( const unsigned char *key_table )

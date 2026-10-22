@@ -202,8 +202,8 @@ int ONScripter::playMIDI(bool loop_flag)
 {
     Mix_SetMusicCMD(midi_cmd);
     
-    char midi_filename[256];
-    sprintf(midi_filename, "%s%s", save_dir?save_dir:archive_path, TMP_MUSIC_FILE);
+    char midi_filename[4096];
+    snprintf(midi_filename, sizeof(midi_filename), "%s%s", save_dir?save_dir:archive_path, TMP_MUSIC_FILE);
 #if defined(ANDROID) || defined(WEB)
     FILE *_fp = fopen(midi_filename, "rb");
     if(!_fp) return -1;

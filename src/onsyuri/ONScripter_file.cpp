@@ -55,7 +55,7 @@ extern "C" void c2pstrcpy(Str255 dst, const char *src);	//#include <TextUtils.h>
 
 void ONScripter::searchSaveFile( SaveFileInfo &save_file_info, int no )
 {
-    char file_name[256];
+    char file_name[4096];
 
     script_h.getStringFromInteger( save_file_info.sjis_no, no, (num_save_file >= 10)?2:1 );
 #if defined(LINUX) || defined(MACOSX) || defined(IOS) || defined(ANDROID)

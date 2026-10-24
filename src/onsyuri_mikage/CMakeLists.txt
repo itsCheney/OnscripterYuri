@@ -177,6 +177,8 @@ list(TRANSFORM ONSYURI_SOURCES PREPEND "${ONSYURI_DIR}/")
 set(HOST_SOURCES
     MikageONSRuntime.mm
     ONScripter_mikage.cpp
+    ONScripter_mikage_gpu.cpp
+    MikageONSGPU.cpp
     MikageONSMovie.cpp
     MikageONSFiber.S)
 
@@ -186,7 +188,7 @@ add_library(ONSRuntime SHARED
     MikageONSRuntime.h)
 
 # The engine's waits, presents and exit() go through the host.
-set_source_files_properties(${ONSYURI_SOURCES} ONScripter_mikage.cpp PROPERTIES
+set_source_files_properties(${ONSYURI_SOURCES} ONScripter_mikage.cpp ONScripter_mikage_gpu.cpp PROPERTIES
     COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/MikageONSHooks.h")
 set_source_files_properties(MikageONSRuntime.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 
@@ -208,6 +210,9 @@ target_include_directories(ONSRuntime PRIVATE
     "${ONSYURI_DIR}"
     "${MIKAGE_SDL2_EXTRA_INCLUDE}"
     "${CMAKE_CURRENT_SOURCE_DIR}")
+# The GPU transition shader talks to SDL3 itself (SDL3 headers only).
+set_source_files_properties(MikageONSGPU.cpp PROPERTIES
+    INCLUDE_DIRECTORIES "${MIKAGE_SDL3_INCLUDE}")
 set_source_files_properties(MikageONSMovie.cpp PROPERTIES
     INCLUDE_DIRECTORIES "${MIKAGE_FFMPEG_ROOT}/include")
 set(MIKAGE_FFMPEG_LIBRARIES)

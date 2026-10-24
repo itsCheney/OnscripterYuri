@@ -48,6 +48,9 @@ void ONScripter::generateEffectDst(int effect_no)
 bool ONScripter::setEffect( EffectLink *effect )
 {
     if ( effect->effect == 0 ) return true;
+#ifdef MIKAGE_ONS_HOST
+    mikageGpuEffectEnd();
+#endif
     
     int effect_no = effect->effect;
     if (effect_cut_flag && (skip_mode & SKIP_NORMAL || ctrl_pressed_status)) 
@@ -121,6 +124,9 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
     if (update_effect_dst){
         generateEffectDst(effect_no);
         update_effect_dst = false;
+#ifdef MIKAGE_ONS_HOST
+        mikageGpuEffectDstChanged();
+#endif
     }
     
     int i, amp;
@@ -246,6 +252,9 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
         
       case 10: // Cross fade
         height = 256 * effect_counter / effect_duration;
+#ifdef MIKAGE_ONS_HOST
+        if (!mikageGpuEffectFrame(ALPHA_BLEND_CONST, height, NULL))
+#endif
         alphaBlend( NULL, ALPHA_BLEND_CONST, height, &dirty_rect.bounding_box );
         break;
         
@@ -318,6 +327,9 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
         break;
 
       case 15: // Fade with mask
+#ifdef MIKAGE_ONS_HOST
+        if (!mikageGpuEffectFrame(ALPHA_BLEND_FADE_MASK, 256 * effect_counter / effect_duration, effect->anim.image_surface))
+#endif
         alphaBlend( effect->anim.image_surface, ALPHA_BLEND_FADE_MASK, 256 * effect_counter / effect_duration, &dirty_rect.bounding_box );
         break;
 
@@ -330,6 +342,9 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
         break;
         
       case 18: // Cross fade with mask
+#ifdef MIKAGE_ONS_HOST
+        if (!mikageGpuEffectFrame(ALPHA_BLEND_CROSSFADE_MASK, 256 * effect_counter * 2 / effect_duration, effect->anim.image_surface))
+#endif
         alphaBlend( effect->anim.image_surface, ALPHA_BLEND_CROSSFADE_MASK, 256 * effect_counter * 2 / effect_duration, &dirty_rect.bounding_box );
         break;
 
@@ -430,12 +445,18 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
             else {
                 // do crossfade
                 height = 256 * effect_counter / effect_duration;
+#ifdef MIKAGE_ONS_HOST
+                if (!mikageGpuEffectFrame(ALPHA_BLEND_CONST, height, NULL))
+#endif
                 alphaBlend( NULL, ALPHA_BLEND_CONST, height, &dirty_rect.bounding_box );
                 not_implemented = true;
             }
         } else { //just in case no dll is given
             // do crossfade
             height = 256 * effect_counter / effect_duration;
+#ifdef MIKAGE_ONS_HOST
+            if (!mikageGpuEffectFrame(ALPHA_BLEND_CONST, height, NULL))
+#endif
             alphaBlend( NULL, ALPHA_BLEND_CONST, height, &dirty_rect.bounding_box );
             not_implemented = true;
         }
@@ -464,6 +485,9 @@ bool ONScripter::doEffect( EffectLink *effect, bool clear_dirty_region )
         return true;
     }
     else{
+#ifdef MIKAGE_ONS_HOST
+        mikageGpuEffectEnd();
+#endif
         SDL_BlitSurface( effect_dst_surface, &dirty_rect.bounding_box, accumulation_surface, &dirty_rect.bounding_box );
 
         if ( effect_no != 0 ) flush(REFRESH_NONE_MODE, NULL, clear_dirty_region);

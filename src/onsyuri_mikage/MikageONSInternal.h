@@ -22,3 +22,6 @@ void mikage_ons_write_save_details(int no, SDL_Surface *thumbnail,
 void mikage_ons_log(int level, const char *message);
 // Forgets the backlog when a session ends. In ONScripter_mikage.cpp.
 void mikage_ons_reset_panels(void);
+// Releases the GPU transition textures and shader while the renderer still
+// exists. In ONScripter_mikage_gpu.cpp.
+void mikage_ons_reset_gpu(void);

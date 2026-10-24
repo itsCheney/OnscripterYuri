@@ -162,6 +162,15 @@ private:
     void mikageAfterLoad(int no);
     void mikageCaptureEntryText(void *entry);
     SDL_Surface *mikageThumbnail(SDL_Surface *frame);
+    // Transitions drawn by a shader on SDL's GPU renderer. Defined in
+    // onsyuri_mikage/ONScripter_mikage_gpu.cpp.
+    // Takes over this frame of a crossfade or mask transition (alphaBlend's
+    // mode and value); false keeps the CPU blend.
+    bool mikageGpuEffectFrame(int mode, int value, SDL_Surface *mask);
+    // Draws and presents the transition in place of flushDirect.
+    bool mikageGpuEffectPresent();
+    void mikageGpuEffectDstChanged();
+    void mikageGpuEffectEnd();
 public:
 #endif
     int  getHeight(){return screen_height;};

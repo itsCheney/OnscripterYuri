@@ -9,6 +9,7 @@ Builds ONScripter Yuri as `ONSRuntime.framework`, the ONScripter engine of [Mika
 - **MIDI and movies.** SDL_mixer's native MIDI backend is macOS-only, so `native_midi_ios.c` replaces it: each song plays through Apple's MIDI synthesizer with the SoundFont the host passes to `Mix_SetSoundFonts` (Mikage ships GeneralUser GS inside the framework). Movies (`mpegplay`, `movie`, `avi`) are decoded with FFmpeg in `MikageONSMovie.cpp` and drawn into the game's window, with their sound mixed through SDL_mixer. The build links FFmpeg's static libraries from `MIKAGE_FFMPEG_ROOT`.
 - **Host API.** `MikageONSRuntime.h` replaces `onscripter_main.cpp`. It covers starting a game, stepping, quitting, background/foreground, the engine window and screenshots. It detects Shift_JIS, GBK or UTF-8 scripts. When the game folder has no `default.ttf`, it uses a system font (Hiragino Sans for Japanese, PingFang for Chinese).
 - **Backlog and saves.** With a panel callback, the game's lookback, save and load screens open as the host's own panels (`ONScripter_mikage.cpp`). The backlog keeps each text page of the session with its voice and a compressed copy of the page's save point, so the newest 200 lines can be jumped back to. Saves stay the game's own `saveN.dat`; each also gets `Mikage/saveN.jpg` and `Mikage/saveN.json` (the screen and the line) for the host's save lists. A launch can also start straight from a save slot.
+- **GPU transitions.** ONScripter draws every frame on the CPU; this build turns on its NEON blending and creates SDL's GPU renderer (Metal). Crossfades and mask transitions (effects 10, 15 and 18, and the crossfade that stands in for unknown effects) then run as one Metal shader draw per frame (`ONScripter_mikage_gpu.cpp`, `MikageONSGPU.cpp`): the old and new frames are uploaded once per transition instead of the whole blended frame every frame. The shader follows ONScripter's integer blend and mask rules. If the GPU renderer or the shader isn't available, everything stays on the CPU path.
 
 ## Engine changes
 
@@ -19,6 +20,7 @@ They are small and inactive outside this build:
 - `ONScripter::getWindow()` and `getFrameSurface()` give the host the window and the last frame; `getRenderViewRect()` and `readGameFile()` let the movie player draw over the game and read files from archives.
 - A window size change recomputes where the game is drawn, as a resize does.
 - The iOS `playAVI` path no longer uses an undefined `loop_flag`.
+- `flushDirect` and the crossfade and mask cases of `doEffect` can hand a transition frame to `ONScripter_mikage_gpu.cpp`.
 - Text save points, page clears, loads, channel 0 voices, written saves and system calls are reported to `ONScripter_mikage.cpp`, which can take over the lookback, save and load system calls. The `game` command loads the launch's save slot, if any.
 
 ## Building

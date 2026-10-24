@@ -381,6 +381,7 @@ void tearDownEngine()
     }
     Mix_Quit();
     mikage_ons_reset_panels();
+    mikage_ons_reset_gpu();
     FontInfo::forgetOpenFonts();
     while (TTF_WasInit())
         TTF_Quit();

@@ -244,6 +244,8 @@ void ONScripter::mikageNotePageClear()
 
 void ONScripter::mikageNoteLoad()
 {
+    // A load replaces the screen; a transition left running must not stay.
+    mikageGpuEffectEnd();
     if (hasOpenEntry) {
         mikageCaptureEntryText(&entries.back());
         if (isBlank(entries.back().text))

@@ -256,7 +256,18 @@ void ONScripter::initSDL()
     }
     Uint32 render_flag = SDL_RENDERER_ACCELERATED;
     if (vsync) render_flag |= SDL_RENDERER_PRESENTVSYNC;
+#ifdef MIKAGE_ONS_HOST
+    // SDL's GPU renderer (Metal) lets transitions run as shaders
+    // (onsyuri_mikage/ONScripter_mikage_gpu.cpp). The hint is global, so it
+    // only stays set for this call.
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "gpu");
     renderer = SDL_CreateRenderer(window, -1, render_flag);
+    SDL_ResetHint(SDL_HINT_RENDER_DRIVER);
+    if (renderer == NULL)
+        renderer = SDL_CreateRenderer(window, -1, render_flag);
+#else
+    renderer = SDL_CreateRenderer(window, -1, render_flag);
+#endif
 
     if (renderer == NULL) {
         utils::printError("Failed to use accelerated renderer, fallback to software...\n");
@@ -860,6 +871,14 @@ void ONScripter::flush( int refresh_mode, SDL_Rect *rect, bool clear_dirty_flag,
 void ONScripter::flushDirect( SDL_Rect &rect, int refresh_mode )
 {
     // printf("## flushDirect mode%d, %d %d %d %d\n", refresh_mode, rect.x, rect.y, rect.w, rect.h );
+#ifdef MIKAGE_ONS_HOST
+    // A GPU transition is on screen; the accumulation surface still holds
+    // the old frame until it ends.
+    if (mikageGpuEffectPresent()) {
+        screen_dirty_flag = false;
+        return;
+    }
+#endif
     
     SDL_Rect dst_rect = rect;
 

@@ -26,6 +26,9 @@
 #include "ONScripter.h"
 #include "Utils.h"
 #include "coding2utf16.h"
+#ifdef MIKAGE_ONS_HOST
+#include "MikageONSInternal.h"
+#endif
 #ifdef USE_FONTCONFIG
 #include <fontconfig/fontconfig.h>
 #endif
@@ -1578,6 +1581,10 @@ void ONScripter::quit()
     SDL_FreeSurface(effect_src_surface);
     SDL_FreeSurface(effect_dst_surface);
     SDL_FreeSurface(effect_tmp_surface);
+#ifdef MIKAGE_ONS_HOST
+    // The GPU transition textures and shader belong to this renderer.
+    mikage_ons_reset_gpu();
+#endif
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();

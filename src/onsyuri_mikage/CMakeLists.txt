@@ -198,7 +198,10 @@ target_compile_definitions(ONSRuntime PRIVATE
     USE_LUA
     USE_BUILTIN_LAYER_EFFECTS
     ENABLE_1BYTE_CHAR
-    USE_PARALLEL)
+    USE_PARALLEL
+    # Every slice is arm64, so the blending code can use NEON.
+    USE_SIMD
+    USE_SIMD_ARM_NEON)
 target_compile_options(ONSRuntime PRIVATE
     $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wno-deprecated-declarations -Wno-invalid-source-encoding -Wno-writable-strings>)
 target_include_directories(ONSRuntime PRIVATE
